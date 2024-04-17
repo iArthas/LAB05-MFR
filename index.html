@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat con Socket.IO</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+
+        var foto1 = null; // Variable para almacenar la foto del chat 1
+        var foto2 = null; // Variable para almacenar la foto del chat 2
+
+        function enviarMensaje(chatId) {
+            var mensajeInput = document.getElementById('mensaje' + chatId);
+            var nombreInput = document.getElementById('nombre' + chatId);
+            var fotoInput = document.getElementById('foto' + chatId);
+            var mensaje = mensajeInput.value.trim();
+            var nombre = nombreInput.value.trim();
+            var fotoFile = fotoInput.files[0];
+
+            if (!nombre) {
+                alert('Por favor ingrese su nombre.');
+                return false;
+            }
+
+            if (!fotoFile) {
+                fotoFile = chatId === 1 ? foto1 : foto2;
+                if (!fotoFile) {
+                    alert('Por favor seleccione una imagen.');
+                    return false;
+                }
+            } else {
+                fotoFile = chatId === 1 ? foto1 = fotoFile : foto2 = fotoFile;
+            }
+
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var foto = e.target.result;
+                var messageData = {
+                    nombre: nombre,
+                    mensaje: mensaje,
+                    foto: foto,
+                    chatId: chatId
+                };
+                socket.emit('chat message', messageData);
+                mensajeInput.value = '';
+                // No borrar el valor del input de la foto para que se mantenga la imagen seleccionada
+            };
+            reader.readAsDataURL(fotoFile);
+            return false;
+        }
+
+        socket.on('chat message', function(data) {
+            var listaMensajes = document.getElementById('lista-mensajes');
+            var mensaje = document.createElement('div');
+            mensaje.className = data.chatId === 1 ? 'mensaje-derecha' : 'mensaje-izquierda';
+            
+            // Crear imagen
+            var image = document.createElement('img');
+            image.src = data.foto;
+            image.style.width = '50px';
+            image.style.height = '50px';
+            image.style.display = 'block'; // Para centrar la imagen
+            
+            // Crear nombre
+            var nombreMensaje = document.createElement('span');
+            nombreMensaje.textContent = data.nombre + ': ';
+            nombreMensaje.style.fontWeight = 'bold'; // Para resaltar el nombre
+            
+            // Crear contenido del mensaje
+            var contenidoMensaje = document.createElement('span');
+            contenidoMensaje.textContent = data.mensaje;
+            
+            // Crear hora del mensaje
+            var horaMensaje = document.createElement('span');
+            horaMensaje.textContent = obtenerHora();
+            horaMensaje.className = 'hora-mensaje'; // Para aplicar estilos
+            
+            // Crear checks
+            var checks = document.createElement('span');
+            checks.textContent = '✓✓'; // Dos checks como en WhatsApp
+            checks.className = 'checks'; // Para aplicar estilos
+            
+            // Agregar elementos al mensaje
+            mensaje.appendChild(image);
+            mensaje.appendChild(nombreMensaje);
+            mensaje.appendChild(contenidoMensaje);
+            mensaje.appendChild(horaMensaje);
+            mensaje.appendChild(checks);
+            
+            listaMensajes.appendChild(mensaje);
+        });
+
+        function obtenerHora() {
+            var fecha = new Date();
+            var horas = fecha.getHours().toString().padStart(2, '0'); // Formatear horas con dos dígitos
+            var minutos = fecha.getMinutes().toString().padStart(2, '0'); // Formatear minutos con dos dígitos
+            return horas + ':' + minutos;
+        }
+    </script>
+    <style>
+        .chat-container {
+            width: 30%;
+            margin: 0 auto;
+            background-color: #e6e6e6;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        .mensaje-derecha, .mensaje-izquierda {
+            display: flex;
+            align-items: center; /* Asegura que todos los elementos estén centrados verticalmente */
+            margin-bottom: 10px;
+            background-color: #d9f7be; /* Verde */
+            color: black;
+        }
+        .mensaje-derecha {
+            justify-content: flex-end;
+        }
+        .mensaje-izquierda {
+            justify-content: flex-start;
+        }
+        img {
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .contenido-mensaje {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .hora-mensaje {
+            margin-top: 5px;
+            margin-left: 10px; /* Separación entre la hora y el contenido del mensaje */
+            font-size: 12px;
+            color: #888;
+        }
+        .checks {
+            color: blue; /* Cambiar color de los checks a azul */
+            margin-left: 5px; /* Separación entre la hora y los checks */
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat</h1>
+    <h2>Chat 1</h2>
+    <form onsubmit="return enviarMensaje(1)">
+        <input id="nombre1" placeholder="Nombre" required />
+        <input id="foto1" type="file" accept="image/*" required />
+        <br>
+        <input id="mensaje1" autocomplete="off" required />
+        <button>Enviar</button>
+    </form>
+
+    <h2>Chat 2</h2>
+    <form onsubmit="return enviarMensaje(2)">
+        <input id="nombre2" placeholder="Nombre" required />
+        <input id="foto2" type="file" accept="image/*" required />
+        <br>
+        <input id="mensaje2" autocomplete="off" required />
+        <button>Enviar</button>
+    </form>
+
+    <h1>Mensajes</h1>
+    <div class="chat-container" id="lista-mensajes"></div>
+</body>
+</html>
